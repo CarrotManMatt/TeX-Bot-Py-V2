@@ -1,7 +1,9 @@
 """Contains cog classes for any stats interactions."""
 
+import asyncio
 import io
 import math
+import random
 import re
 from typing import TYPE_CHECKING
 
@@ -273,7 +275,13 @@ class StatsCommandsCog(TeXBotBaseCog):
             )
             return
 
-        await ctx.respond(":point_down:Your stats graph is shown below:point_down:")
+        await ctx.respond(
+            random.choice(tuple(settings["APRIL_FOOLS_RESPONSE_MESSAGES"])).strip()  # noqa: S311
+        )
+
+        await asyncio.sleep(random.uniform(0.8, 3))  # noqa: S311
+
+        await ctx.followup.send(":point_down:Your stats graph is shown below:point_down:")
 
         await ctx.channel.send(
             f"**{ctx.user.display_name}** used `/{ctx.command}`",
@@ -378,7 +386,13 @@ class StatsCommandsCog(TeXBotBaseCog):
             await self.command_send_error(ctx, message="There are not enough messages sent.")
             return
 
-        await ctx.respond(":point_down:Your stats graph is shown below:point_down:")
+        await ctx.respond(
+            random.choice(tuple(settings["APRIL_FOOLS_RESPONSE_MESSAGES"])).strip()  # noqa: S311
+        )
+
+        await asyncio.sleep(random.uniform(0.8, 3))  # noqa: S311
+
+        await ctx.followup.send(":point_down:Your stats graph is shown below:point_down:")
 
         await ctx.channel.send(
             f"**{ctx.user.display_name}** used `/{ctx.command}`",
@@ -486,7 +500,13 @@ class StatsCommandsCog(TeXBotBaseCog):
             )
             return
 
-        await ctx.respond(":point_down:Your stats graph is shown below:point_down:")
+        await ctx.respond(
+            random.choice(tuple(settings["APRIL_FOOLS_RESPONSE_MESSAGES"])).strip()  # noqa: S311
+        )
+
+        await asyncio.sleep(random.uniform(0.8, 3))  # noqa: S311
+
+        await ctx.followup.send(":point_down:Your stats graph is shown below:point_down:")
 
         await ctx.channel.send(
             f"**{ctx.user.display_name}** used `/{ctx.command}`",
@@ -559,7 +579,13 @@ class StatsCommandsCog(TeXBotBaseCog):
             )
             return
 
-        await ctx.respond(":point_down:Your stats graph is shown below:point_down:")
+        await ctx.respond(
+            random.choice(tuple(settings["APRIL_FOOLS_RESPONSE_MESSAGES"])).strip()  # noqa: S311
+        )
+
+        await asyncio.sleep(random.uniform(0.8, 3))  # noqa: S311
+
+        await ctx.followup.send(":point_down:Your stats graph is shown below:point_down:")
 
         await ctx.channel.send(
             f"**{ctx.user.display_name}** used `/{ctx.command}`",

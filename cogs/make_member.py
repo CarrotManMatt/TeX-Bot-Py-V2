@@ -1,7 +1,9 @@
 """Contains cog classes for any make_member interactions."""
 
+import asyncio
 import contextlib
 import logging
+import random
 import re
 from typing import TYPE_CHECKING
 
@@ -129,6 +131,12 @@ class MakeMemberCommandCog(TeXBotBaseCog):
         # NOTE: Shortcut accessors are placed at the top of the function, so that the exceptions they raise are displayed before any further errors may be sent
         member_role: discord.Role = await self.bot.member_role
         interaction_member: discord.Member = await ctx.bot.get_main_guild_member(ctx.user)
+
+        await ctx.respond(
+            random.choice(tuple(settings["APRIL_FOOLS_RESPONSE_MESSAGES"])).strip()  # noqa: S311
+        )
+
+        await asyncio.sleep(random.uniform(0.8, 3))  # noqa: S311
 
         await ctx.defer(ephemeral=True)
         async with ctx.typing():

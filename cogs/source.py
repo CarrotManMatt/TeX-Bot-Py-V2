@@ -1,9 +1,12 @@
 """Contains cog classes for any source interactions."""
 
+import asyncio
+import random
 from typing import TYPE_CHECKING
 
 import discord
 
+from config import settings
 from utils import TeXBotBaseCog
 
 if TYPE_CHECKING:
@@ -23,6 +26,12 @@ class SourceCommandCog(TeXBotBaseCog):
     async def source(self, ctx: "TeXBotApplicationContext") -> None:  # type: ignore[misc]
         """Definition & callback response of the "source" command."""
         await ctx.respond(
+            random.choice(tuple(settings["APRIL_FOOLS_RESPONSE_MESSAGES"])).strip()  # noqa: S311
+        )
+
+        await asyncio.sleep(random.uniform(0.8, 3))  # noqa: S311
+
+        await ctx.followup.send(
             (
                 f"{self.bot.user.mention if self.bot.user else '**`@TeX-Bot`**'} "
                 "is an open-source project, "

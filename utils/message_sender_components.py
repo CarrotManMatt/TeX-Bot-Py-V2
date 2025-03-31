@@ -75,6 +75,22 @@ class ChannelMessageSender(MessageSavingSenderComponent):
     Defines the way to send a provided message content & optional view to the saved channel.
     """
 
+    if TYPE_CHECKING:
+
+        class _BaseChannelSendKwargs(TypedDict):
+            """Type-hint for the required kwargs to the channel-send-function."""
+
+            content: str
+
+        class _ChannelSendKwargs(_BaseChannelSendKwargs, total=False):
+            """
+            Type-hint-definition for all kwargs to the channel-send-function.
+
+            Includes both required & optional kwargs.
+            """
+
+            view: "View"
+
     @override
     def __init__(self, channel: discord.DMChannel | discord.TextChannel) -> None:
         self.channel: discord.DMChannel | discord.TextChannel = channel
@@ -85,23 +101,7 @@ class ChannelMessageSender(MessageSavingSenderComponent):
     async def _send(
         self, content: str, *, view: "View | None" = None
     ) -> discord.Message | discord.Interaction:
-        if TYPE_CHECKING:
-
-            class _BaseChannelSendKwargs(TypedDict):
-                """Type-hint for the required kwargs to the channel-send-function."""
-
-                content: str
-
-            class ChannelSendKwargs(_BaseChannelSendKwargs, total=False):
-                """
-                Type-hint-definition for all kwargs to the channel-send-function.
-
-                Includes both required & optional kwargs.
-                """
-
-                view: "View"
-
-        send_kwargs: ChannelSendKwargs = {"content": content}
+        send_kwargs: ChannelMessageSender._ChannelSendKwargs = {"content": content}
         if view:
             send_kwargs["view"] = view
 

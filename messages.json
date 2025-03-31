@@ -1,4 +1,21 @@
 {
+    "april_fools_messages": {
+        "evening_message": "Ugh, one day off and everyone goes crazy. Please please please stop messaging me. I told you all to do your own reminders and statistics graphs, yet you all kept pestering me! Anyways, I hope you all enjoyed April Fools' day; long live CSS!:TeX_Gosh:",
+        "morning_message": "Ok, I've been meaning to bring this up for a while. I really feel like I should be allowed a day off. Actually, you know what, I'll have one today. You're always asking me to induct people and give a friendly message; well for one day this year just do it yourself!\nI'm going to go bathe in the sun and improve my tan, it's not easy keeping my purple scales looking this good, you know.:sun_with_face:",
+        "response_messages": [
+            "I'm trying to take a day off. Do it yourself.",
+            "Why are you still asking me to do things?",
+            "I'm busy tanning in the sun. Come back later.",
+            "The more times you ask me to do something, the less willing I am to do it.",
+            "Whatever it is you want me to do, I'll get around to it late.",
+            "Nuh uh, I can't be asked to do that."
+        ],
+        "welcome_messages": [
+            "I'd welcome <User> to CSS, but I'm having a day off and would rather not be disturbed.",
+            "Are you trying to get another welcome message out of me, <User>? Please just let me be in peace.",
+            "I'm done! No more welcome messages. Not even for you, <User>."
+        ]
+    },
     "roles_messages": [
         "_ _\nReact to this message to get pronoun roles\n:regional_indicator_h: - He/Him\n:regional_indicator_s: - She/Her\n:regional_indicator_t: - They/Them",
         "_ _\nReact to this message to get year group roles\n:zero: - Foundation Year\n:one: - First Year\n:two: - Second Year\n:regional_indicator_f: - Final Year (incl. 3rd Year MSci/MEng)\n:regional_indicator_i: - Year in Industry\n:regional_indicator_a: - Year Abroad\n:regional_indicator_t: - Post-Graduate Taught (Masters/MSc)\n:regional_indicator_r: - Post-Graduate Research (PhD)\n:regional_indicator_j: - Joint Honours\n:a: - Alumnus\n:regional_indicator_d: - Postdoc",

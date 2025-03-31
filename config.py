@@ -376,6 +376,100 @@ class Settings(abc.ABC):
         cls._settings["ROLES_MESSAGES"] = set(messages_dict["roles_messages"])  # type: ignore[call-overload]
 
     @classmethod
+    def _setup_april_fools_messages(cls) -> None:
+        april_fools_messages: object | None = cls._get_messages_dict(
+            os.getenv("MESSAGES_FILE_PATH")
+        ).get("april_fools_messages", None)
+
+        if april_fools_messages is None:
+            raise MessagesJSONFileMissingKeyError(missing_key="april_fools_messages")
+
+        if not isinstance(april_fools_messages, Mapping):
+            raise MessagesJSONFileValueError(
+                dict_key="april_fools_messages", invalid_value=april_fools_messages
+            )
+
+        april_fools_welcome_messages: object | None = april_fools_messages.get(
+            "welcome_messages", None
+        )
+        if april_fools_welcome_messages is None:
+            raise MessagesJSONFileMissingKeyError(
+                missing_key="april_fools_messages.welcome_messages"
+            )
+
+        if not isinstance(april_fools_welcome_messages, Iterable):
+            raise MessagesJSONFileValueError(
+                dict_key="april_fools_messages.welcome_messages",
+                invalid_value=april_fools_welcome_messages,
+            )
+
+        april_fools_welcome_messages = set(april_fools_welcome_messages)
+
+        if not april_fools_welcome_messages:
+            raise MessagesJSONFileValueError(
+                dict_key="april_fools_messages.welcome_messages",
+                invalid_value=april_fools_welcome_messages,
+            )
+
+        cls._settings["APRIL_FOOLS_WELCOME_MESSAGES"] = april_fools_welcome_messages
+
+        april_fools_response_messages: object | None = april_fools_messages.get(
+            "response_messages", None
+        )
+        if april_fools_response_messages is None:
+            raise MessagesJSONFileMissingKeyError(
+                missing_key="april_fools_messages.response_messages"
+            )
+
+        if not isinstance(april_fools_response_messages, Iterable):
+            raise MessagesJSONFileValueError(
+                dict_key="april_fools_messages.response_messages",
+                invalid_value=april_fools_response_messages,
+            )
+
+        april_fools_response_messages = set(april_fools_response_messages)
+
+        if not april_fools_response_messages:
+            raise MessagesJSONFileValueError(
+                dict_key="april_fools_messages.response_messages",
+                invalid_value=april_fools_response_messages,
+            )
+
+        cls._settings["APRIL_FOOLS_RESPONSE_MESSAGES"] = april_fools_response_messages
+
+        april_fools_morning_message: object | None = april_fools_messages.get(
+            "morning_message", None
+        )
+        if april_fools_morning_message is None:
+            raise MessagesJSONFileMissingKeyError(
+                missing_key="april_fools_messages.morning_message"
+            )
+
+        if not isinstance(april_fools_morning_message, str):
+            raise MessagesJSONFileValueError(
+                dict_key="april_fools_messages.morning_message",
+                invalid_value=april_fools_morning_message,
+            )
+
+        cls._settings["APRIL_FOOLS_MORNING_MESSAGE"] = april_fools_morning_message
+
+        april_fools_evening_message: object | None = april_fools_messages.get(
+            "evening_message", None
+        )
+        if april_fools_evening_message is None:
+            raise MessagesJSONFileMissingKeyError(
+                missing_key="april_fools_messages.evening_message"
+            )
+
+        if not isinstance(april_fools_evening_message, str):
+            raise MessagesJSONFileValueError(
+                dict_key="april_fools_messages.evening_message",
+                invalid_value=april_fools_evening_message,
+            )
+
+        cls._settings["APRIL_FOOLS_EVENING_MESSAGE"] = april_fools_evening_message
+
+    @classmethod
     def _setup_organisation_id(cls) -> None:
         raw_organisation_id: str | None = os.getenv("ORGANISATION_ID")
 

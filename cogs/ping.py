@@ -1,5 +1,6 @@
 """Contains cog classes for any ping interactions."""
 
+import asyncio
 import random
 from typing import TYPE_CHECKING
 
@@ -23,6 +24,12 @@ class PingCommandCog(TeXBotBaseCog):
     async def ping(self, ctx: "TeXBotApplicationContext") -> None:  # type: ignore[misc]
         """Definition & callback response of the "ping" command."""
         await ctx.respond(
+            random.choice(tuple(settings["APRIL_FOOLS_RESPONSE_MESSAGES"])).strip()  # noqa: S311
+        )
+
+        await asyncio.sleep(random.uniform(0.8, 3))  # noqa: S311
+
+        await ctx.followup.send(
             random.choices(  # noqa: S311
                 [
                     "Pong!",

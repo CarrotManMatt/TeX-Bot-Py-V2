@@ -1,9 +1,11 @@
 """Contains cog classes for any remind_me interactions."""
 
+import asyncio
 import datetime
 import functools
 import itertools
 import logging
+import random
 import re
 from typing import TYPE_CHECKING, override
 
@@ -13,6 +15,7 @@ from discord.ext import tasks
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+from config import settings
 from db.core.models import DiscordMember, DiscordReminder
 from utils import TeXBotBaseCog
 
@@ -263,7 +266,13 @@ class RemindMeCommandCog(TeXBotBaseCog):
             )
             return
 
-        await ctx.respond("Reminder set!", ephemeral=True)
+        await ctx.respond(
+            random.choice(tuple(settings["APRIL_FOOLS_RESPONSE_MESSAGES"])).strip()  # noqa: S311
+        )
+
+        await asyncio.sleep(random.uniform(0.8, 3))  # noqa: S311
+
+        await ctx.followup.send("Reminder set!", ephemeral=True)
 
         await discord.utils.sleep_until(reminder.send_datetime)
 
@@ -352,6 +361,7 @@ class ClearRemindersBacklogTaskCog(TeXBotBaseCog):
                     await self.bot.close()
 
                 await channel.send(
+                    f"{random.choice(tuple(settings['APRIL_FOOLS_RESPONSE_MESSAGES'])).strip()}\n"  # noqa: S311
                     "**Sorry it's a bit late! "
                     "(I'm just catching up with some reminders I missed!)**\n\n"
                     f"{reminder.get_formatted_message(user_mention)}",
