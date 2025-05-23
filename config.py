@@ -1,5 +1,5 @@
 """
-Contains settings values and import & setup functions.
+Contains settings values and import and setup functions.
 
 Settings values are imported from the .env file or the current environment variables.
 These values are used to configure the functionality of the bot at run-time.
@@ -149,7 +149,6 @@ class Settings(abc.ABC):
         logger.setLevel(getattr(logging, raw_console_log_level))
 
         console_logging_handler: logging.Handler = logging.StreamHandler()
-        # noinspection SpellCheckingInspection
         console_logging_handler.setFormatter(
             logging.Formatter("{asctime} | {name} | {levelname:^8} - {message}", style="{"),
         )
@@ -243,6 +242,7 @@ class Settings(abc.ABC):
                 "GROUP_NAME must not contain any invalid characters."
             )
             raise ImproperlyConfiguredError(INVALID_GROUP_FULL_NAME)
+
         cls._settings["_GROUP_FULL_NAME"] = raw_group_full_name
 
     @classmethod
@@ -258,6 +258,7 @@ class Settings(abc.ABC):
                 "GROUP_SHORT_NAME must not contain any invalid characters."
             )
             raise ImproperlyConfiguredError(INVALID_GROUP_SHORT_NAME)
+
         cls._settings["_GROUP_SHORT_NAME"] = raw_group_short_name
 
     @classmethod
@@ -289,6 +290,21 @@ class Settings(abc.ABC):
             raise ImproperlyConfiguredError(INVALID_MEMBERSHIP_PERKS_URL_MESSAGE)
 
         cls._settings["MEMBERSHIP_PERKS_URL"] = raw_membership_perks_url
+
+    @classmethod
+    def _setup_discord_invite_url(cls) -> None:
+        raw_discord_invite_url: str | None = os.getenv("DISCORD_INVITE_URL")
+
+        DISCORD_INVITE_URL_IS_VALID: Final[bool] = bool(
+            not raw_discord_invite_url or validators.url(raw_discord_invite_url),
+        )
+        if not DISCORD_INVITE_URL_IS_VALID:
+            INVALID_DISCORD_INVITE_URL_MESSAGE: Final[str] = (
+                "DISCORD_INVITE_URL must be a valid URL."
+            )
+            raise ImproperlyConfiguredError(INVALID_DISCORD_INVITE_URL_MESSAGE)
+
+        cls._settings["DISCORD_INVITE_URL"] = raw_discord_invite_url
 
     @classmethod
     def _setup_ping_command_easter_egg_probability(cls) -> None:
@@ -386,6 +402,7 @@ class Settings(abc.ABC):
                 dict_key="roles_messages",
                 invalid_value=messages_dict["roles_messages"],
             )
+
         cls._settings["ROLES_MESSAGES"] = set(messages_dict["roles_messages"])  # type: ignore[call-overload]
 
     @classmethod
@@ -830,6 +847,7 @@ class Settings(abc.ABC):
             cls._setup_members_list_auth_session_cookie()
             cls._setup_membership_perks_url()
             cls._setup_purchase_membership_url()
+            cls._setup_discord_invite_url()
             cls._setup_send_introduction_reminders()
             cls._setup_send_introduction_reminders_delay()
             cls._setup_send_introduction_reminders_interval()
@@ -867,8 +885,7 @@ settings: "Final[Settings]" = _settings_class_factory()()
 
 
 def run_setup() -> None:
-    """Execute the setup functions required, before other modules can be run."""
-    # noinspection PyProtectedMember
+    """Execute the required setup functions."""
     settings._setup_env_variables()  # noqa: SLF001
 
     logger.debug("Begin database setup")

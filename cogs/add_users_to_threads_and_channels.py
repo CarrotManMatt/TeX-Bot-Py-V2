@@ -8,7 +8,7 @@ import discord
 
 from config import settings
 from exceptions import GuestRoleDoesNotExistError, GuildDoesNotExistError
-from utils import TeXBotBaseCog
+from utils import CommandChecks, TeXBotBaseCog
 from utils.error_capture_decorators import capture_guild_does_not_exist_error
 
 if TYPE_CHECKING:
@@ -203,6 +203,8 @@ class AddUsersToThreadsAndChannelsCommandCog(TeXBotBaseCog):
         required=False,
         parameter_name="silent",
     )
+    @CommandChecks.check_interaction_user_has_committee_role
+    @CommandChecks.check_interaction_user_in_main_guild
     async def add_user_to_channel(  # type: ignore[misc]
         self,
         ctx: "TeXBotApplicationContext",
@@ -233,7 +235,8 @@ class AddUsersToThreadsAndChannelsCommandCog(TeXBotBaseCog):
             content=(
                 f"Successfully added {user_to_add.mention} "
                 f"to the channel: {ctx.channel.mention}."
-            )
+            ),
+            ephemeral=True,
         )
 
     @discord.slash_command(  # type: ignore[no-untyped-call, misc]
@@ -255,6 +258,8 @@ class AddUsersToThreadsAndChannelsCommandCog(TeXBotBaseCog):
         required=False,
         parameter_name="silent",
     )
+    @CommandChecks.check_interaction_user_has_committee_role
+    @CommandChecks.check_interaction_user_in_main_guild
     async def add_role_to_channel(  # type: ignore[misc]
         self,
         ctx: "TeXBotApplicationContext",
