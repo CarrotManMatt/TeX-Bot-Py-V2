@@ -29,6 +29,7 @@ from exceptions import (
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from collections.abc import Set as AbstractSet
     from logging import Logger
     from typing import IO, Any, ClassVar, Final
 
@@ -44,39 +45,31 @@ __all__: "Sequence[str]" = (
 
 PROJECT_ROOT: "Final[Path]" = Path(__file__).parent.resolve()
 
-TRUE_VALUES: "Final[frozenset[str]]" = frozenset({"true", "1", "t", "y", "yes", "on"})
-FALSE_VALUES: "Final[frozenset[str]]" = frozenset({"false", "0", "f", "n", "no", "off"})
-VALID_SEND_INTRODUCTION_REMINDERS_VALUES: "Final[frozenset[str]]" = frozenset(
-    {"once"} | TRUE_VALUES | FALSE_VALUES,
+TRUE_VALUES: "Final[AbstractSet[str]]" = {"true", "1", "t", "y", "yes", "on"}
+FALSE_VALUES: "Final[AbstractSet[str]]" = {"false", "0", "f", "n", "no", "off"}
+VALID_SEND_INTRODUCTION_REMINDERS_VALUES: "Final[AbstractSet[str]]" = (
+    {"once", "interval"} | TRUE_VALUES | FALSE_VALUES
 )
-DEFAULT_STATISTICS_ROLES: "Final[frozenset[str]]" = frozenset(
-    {
-        "Committee",
-        "Committee-Elect",
-        "Student Rep",
-        "Member",
-        "Guest",
-        "Server Booster",
-        "Foundation Year",
-        "First Year",
-        "Second Year",
-        "Final Year",
-        "Year In Industry",
-        "Year Abroad",
-        "PGT",
-        "PGR",
-        "Alumnus/Alumna",
-        "Postdoc",
-        "Quiz Victor",
-    },
-)
-LOG_LEVEL_CHOICES: "Final[Sequence[str]]" = (
-    "DEBUG",
-    "INFO",
-    "WARNING",
-    "ERROR",
-    "CRITICAL",
-)
+DEFAULT_STATISTICS_ROLES: "Final[AbstractSet[str]]" = {
+    "Committee",
+    "Committee-Elect",
+    "Student Rep",
+    "Member",
+    "Guest",
+    "Server Booster",
+    "Foundation Year",
+    "First Year",
+    "Second Year",
+    "Final Year",
+    "Year In Industry",
+    "Year Abroad",
+    "PGT",
+    "PGR",
+    "Alumnus/Alumna",
+    "Postdoc",
+    "Quiz Victor",
+}
+LOG_LEVEL_CHOICES: "Final[Sequence[str]]" = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
 logger: "Final[Logger]" = logging.getLogger("TeX-Bot")
 
@@ -115,7 +108,7 @@ class Settings(abc.ABC):
 
         if re.fullmatch(r"\A[A-Z](?:[A-Z_]*[A-Z])?\Z", item):
             INVALID_SETTINGS_KEY_MESSAGE: Final[str] = self.get_invalid_settings_key_message(
-                item,
+                item
             )
             raise AttributeError(INVALID_SETTINGS_KEY_MESSAGE)
 
@@ -136,7 +129,7 @@ class Settings(abc.ABC):
 
     @staticmethod
     def _setup_logging() -> None:
-        raw_console_log_level: str = str(os.getenv("CONSOLE_LOG_LEVEL", "INFO")).upper()
+        raw_console_log_level: str = os.getenv("CONSOLE_LOG_LEVEL", "INFO").upper().strip()
 
         if raw_console_log_level not in LOG_LEVEL_CHOICES:
             INVALID_LOG_LEVEL_MESSAGE: Final[str] = f"""LOG_LEVEL must be one of {
@@ -150,7 +143,7 @@ class Settings(abc.ABC):
 
         console_logging_handler: logging.Handler = logging.StreamHandler()
         console_logging_handler.setFormatter(
-            logging.Formatter("{asctime} | {name} | {levelname:^8} - {message}", style="{"),
+            logging.Formatter("{asctime} | {name} | {levelname:^8} - {message}", style="{")
         )
 
         logger.addHandler(console_logging_handler)
@@ -158,18 +151,14 @@ class Settings(abc.ABC):
 
     @classmethod
     def _setup_discord_bot_token(cls) -> None:
-        raw_discord_bot_token: str | None = os.getenv("DISCORD_BOT_TOKEN")
+        raw_discord_bot_token: str = os.getenv("DISCORD_BOT_TOKEN", default="").strip()
 
-        DISCORD_BOT_TOKEN_IS_VALID: Final[bool] = bool(
-            raw_discord_bot_token
-            and re.fullmatch(
-                r"\A([A-Za-z0-9_-]{24,26})\.([A-Za-z0-9_-]{6})\.([A-Za-z0-9_-]{27,38})\Z",
-                raw_discord_bot_token,
-            ),
-        )
-        if not DISCORD_BOT_TOKEN_IS_VALID:
+        if not raw_discord_bot_token or not re.fullmatch(
+            r"\A([A-Za-z0-9_-]{24,26})\.([A-Za-z0-9_-]{6})\.([A-Za-z0-9_-]{27,38})\Z",
+            raw_discord_bot_token,
+        ):
             INVALID_DISCORD_BOT_TOKEN_MESSAGE: Final[str] = (
-                "DISCORD_BOT_TOKEN must be a valid Discord bot token "  # noqa: S105
+                "DISCORD_BOT_TOKEN must be set to a valid Discord bot token "  # noqa: S105
                 "(see https://discord.com/developers/docs/topics/oauth2#bot-vs-user-accounts)."
             )
             raise ImproperlyConfiguredError(INVALID_DISCORD_BOT_TOKEN_MESSAGE)
@@ -180,13 +169,16 @@ class Settings(abc.ABC):
     def _setup_discord_log_channel_webhook(cls) -> "Logger":
         raw_discord_log_channel_webhook_url: str = os.getenv(
             "DISCORD_LOG_CHANNEL_WEBHOOK_URL", ""
-        )
+        ).strip()
 
-        if raw_discord_log_channel_webhook_url and (
-            not validators.url(raw_discord_log_channel_webhook_url)
-            or not raw_discord_log_channel_webhook_url.startswith(
-                "https://discord.com/api/webhooks/"
-            )
+        if not raw_discord_log_channel_webhook_url:
+            cls._settings["DISCORD_LOG_CHANNEL_WEBHOOK_URL"] = None
+            return logging.getLogger("_temp_webhook_config")
+
+        if not validators.url(
+            raw_discord_log_channel_webhook_url
+        ) or not raw_discord_log_channel_webhook_url.startswith(
+            "https://discord.com/api/webhooks/"
         ):
             INVALID_DISCORD_LOG_CHANNEL_WEBHOOK_URL_MESSAGE: Final[str] = (
                 "DISCORD_LOG_CHANNEL_WEBHOOK_URL must be a valid webhook URL "
@@ -196,18 +188,17 @@ class Settings(abc.ABC):
 
         webhook_config_logger: Logger = logging.getLogger("_temp_webhook_config")
 
-        if raw_discord_log_channel_webhook_url:
-            discord_logging_handler: logging.Handler = DiscordHandler(
-                service_name="TeX-Bot", webhook_url=raw_discord_log_channel_webhook_url
-            )
+        discord_logging_handler: logging.Handler = DiscordHandler(
+            service_name="TeX-Bot", webhook_url=raw_discord_log_channel_webhook_url
+        )
 
-            discord_logging_handler.setLevel(logging.WARNING)
+        discord_logging_handler.setLevel(logging.WARNING)
 
-            discord_logging_handler.setFormatter(
-                logging.Formatter("{levelname} | {message}", style="{")
-            )
+        discord_logging_handler.setFormatter(
+            logging.Formatter("{levelname} | {message}", style="{")
+        )
 
-            webhook_config_logger.addHandler(discord_logging_handler)
+        webhook_config_logger.addHandler(discord_logging_handler)
 
         cls._settings["DISCORD_LOG_CHANNEL_WEBHOOK_URL"] = raw_discord_log_channel_webhook_url
 
@@ -215,29 +206,28 @@ class Settings(abc.ABC):
 
     @classmethod
     def _setup_discord_guild_id(cls) -> None:
-        raw_discord_guild_id: str | None = os.getenv("DISCORD_GUILD_ID")
+        raw_discord_guild_id: str = os.getenv("DISCORD_GUILD_ID", default="").strip()
 
-        DISCORD_GUILD_ID_IS_VALID: Final[bool] = bool(
-            raw_discord_guild_id and re.fullmatch(r"\A\d{17,20}\Z", raw_discord_guild_id),
-        )
-        if not DISCORD_GUILD_ID_IS_VALID:
+        if not raw_discord_guild_id or not re.fullmatch(
+            r"\A\d{17,20}\Z", raw_discord_guild_id
+        ):
             INVALID_DISCORD_GUILD_ID_MESSAGE: Final[str] = (
                 "DISCORD_GUILD_ID must be a valid Discord guild ID "
                 "(see https://docs.pycord.dev/en/stable/api/abcs.html#discord.abc.Snowflake.id)."
             )
             raise ImproperlyConfiguredError(INVALID_DISCORD_GUILD_ID_MESSAGE)
 
-        cls._settings["_DISCORD_MAIN_GUILD_ID"] = int(raw_discord_guild_id)  # type: ignore[arg-type]
+        cls._settings["_DISCORD_MAIN_GUILD_ID"] = int(raw_discord_guild_id)
 
     @classmethod
     def _setup_group_full_name(cls) -> None:
-        raw_group_full_name: str | None = os.getenv("GROUP_NAME")
+        raw_group_full_name: str = os.getenv("GROUP_NAME", default="").strip()
 
-        GROUP_FULL_NAME_IS_VALID: Final[bool] = bool(
-            not raw_group_full_name
-            or re.fullmatch(r"\A[A-Za-z0-9 '&!?:,.#%\"-]+\Z", raw_group_full_name),
-        )
-        if not GROUP_FULL_NAME_IS_VALID:
+        if not raw_group_full_name:
+            cls._settings["_GROUP_FULL_NAME"] = None
+            return
+
+        if not re.fullmatch(r"\A[A-Za-z0-9 '&!?:,.#%\"-]+\Z", raw_group_full_name):
             INVALID_GROUP_FULL_NAME: Final[str] = (
                 "GROUP_NAME must not contain any invalid characters."
             )
@@ -247,13 +237,13 @@ class Settings(abc.ABC):
 
     @classmethod
     def _setup_group_short_name(cls) -> None:
-        raw_group_short_name: str | None = os.getenv("GROUP_SHORT_NAME")
+        raw_group_short_name: str = os.getenv("GROUP_SHORT_NAME", default="").strip()
 
-        GROUP_SHORT_NAME_IS_VALID: Final[bool] = bool(
-            not raw_group_short_name
-            or re.fullmatch(r"\A[A-Za-z0-9'&!?:,.#%\"-]+\Z", raw_group_short_name),
-        )
-        if not GROUP_SHORT_NAME_IS_VALID:
+        if not raw_group_short_name:
+            cls._settings["_GROUP_SHORT_NAME"] = None
+            return
+
+        if not re.fullmatch(r"\A[A-Za-z0-9'&!?:,.#%\"-]+\Z", raw_group_short_name):
             INVALID_GROUP_SHORT_NAME: Final[str] = (
                 "GROUP_SHORT_NAME must not contain any invalid characters."
             )
@@ -263,12 +253,30 @@ class Settings(abc.ABC):
 
     @classmethod
     def _setup_purchase_membership_url(cls) -> None:
-        raw_purchase_membership_url: str | None = os.getenv("PURCHASE_MEMBERSHIP_URL")
+        raw_purchase_membership_url: str = os.getenv(
+            "PURCHASE_MEMBERSHIP_URL", default=""
+        ).strip()
 
-        PURCHASE_MEMBERSHIP_URL_IS_VALID: Final[bool] = bool(
-            not raw_purchase_membership_url or validators.url(raw_purchase_membership_url),
-        )
-        if not PURCHASE_MEMBERSHIP_URL_IS_VALID:
+        if not raw_purchase_membership_url:
+            cls._settings["PURCHASE_MEMBERSHIP_URL"] = None
+            return
+
+        if not raw_purchase_membership_url.startswith("https://"):
+            if "://" in raw_purchase_membership_url:
+                INVALID_PURCHASE_MEMBERSHIP_URL_PROTOCOL_MESSAGE: Final[str] = (
+                    "Only HTTPS is supported as a protocol for PURCHASE_MEMBERSHIP_URL."
+                )
+                raise ImproperlyConfiguredError(
+                    INVALID_PURCHASE_MEMBERSHIP_URL_PROTOCOL_MESSAGE
+                )
+
+            raw_purchase_membership_url = "https://" + raw_purchase_membership_url
+            logger.warning(
+                "PURCHASE_MEMBERSHIP_URL was missing a URL protocol. "
+                "Please ensure all URLs are valid HTTPS URLs."
+            )
+
+        if not validators.url(raw_purchase_membership_url):
             INVALID_PURCHASE_MEMBERSHIP_URL_MESSAGE: Final[str] = (
                 "PURCHASE_MEMBERSHIP_URL must be a valid URL."
             )
@@ -278,12 +286,26 @@ class Settings(abc.ABC):
 
     @classmethod
     def _setup_membership_perks_url(cls) -> None:
-        raw_membership_perks_url: str | None = os.getenv("MEMBERSHIP_PERKS_URL")
+        raw_membership_perks_url: str = os.getenv("MEMBERSHIP_PERKS_URL", default="").strip()
 
-        MEMBERSHIP_PERKS_URL_IS_VALID: Final[bool] = bool(
-            not raw_membership_perks_url or validators.url(raw_membership_perks_url),
-        )
-        if not MEMBERSHIP_PERKS_URL_IS_VALID:
+        if not raw_membership_perks_url:
+            cls._settings["MEMBERSHIP_PERKS_URL"] = None
+            return
+
+        if not raw_membership_perks_url.startswith("https://"):
+            if "://" in raw_membership_perks_url:
+                INVALID_MEMBERSHIP_PERKS_URL_PROTOCOL_MESSAGE: Final[str] = (
+                    "Only HTTPS is supported as a protocol for MEMBERSHIP_PERKS_URL."
+                )
+                raise ImproperlyConfiguredError(INVALID_MEMBERSHIP_PERKS_URL_PROTOCOL_MESSAGE)
+
+            raw_membership_perks_url = "https://" + raw_membership_perks_url
+            logger.warning(
+                "MEMBERSHIP_PERKS_URL was missing a URL protocol. "
+                "Please ensure all URLs are valid HTTPS URLs."
+            )
+
+        if not validators.url(raw_membership_perks_url):
             INVALID_MEMBERSHIP_PERKS_URL_MESSAGE: Final[str] = (
                 "MEMBERSHIP_PERKS_URL must be a valid URL."
             )
@@ -292,30 +314,56 @@ class Settings(abc.ABC):
         cls._settings["MEMBERSHIP_PERKS_URL"] = raw_membership_perks_url
 
     @classmethod
-    def _setup_discord_invite_url(cls) -> None:
-        raw_discord_invite_url: str | None = os.getenv("DISCORD_INVITE_URL")
+    def _setup_custom_discord_invite_url(cls) -> None:
+        raw_custom_discord_invite_url: str = os.getenv(
+            "CUSTOM_DISCORD_INVITE_URL", default=""
+        ).strip()
 
-        DISCORD_INVITE_URL_IS_VALID: Final[bool] = bool(
-            not raw_discord_invite_url or validators.url(raw_discord_invite_url),
-        )
-        if not DISCORD_INVITE_URL_IS_VALID:
-            INVALID_DISCORD_INVITE_URL_MESSAGE: Final[str] = (
-                "DISCORD_INVITE_URL must be a valid URL."
+        if not raw_custom_discord_invite_url:
+            cls._settings["CUSTOM_DISCORD_INVITE_URL"] = None
+            return
+
+        if not raw_custom_discord_invite_url.startswith("https://"):
+            if "://" in raw_custom_discord_invite_url:
+                INVALID_CUSTOM_DISCORD_INVITE_URL_PROTOCOL_MESSAGE: Final[str] = (
+                    "Only HTTPS is supported as a protocol for CUSTOM_DISCORD_INVITE_URL."
+                )
+                raise ImproperlyConfiguredError(
+                    INVALID_CUSTOM_DISCORD_INVITE_URL_PROTOCOL_MESSAGE
+                )
+
+            raw_custom_discord_invite_url = "https://" + raw_custom_discord_invite_url
+            logger.warning(
+                "CUSTOM_DISCORD_INVITE_URL was missing a URL protocol. "
+                "Please ensure all URLs are valid HTTPS URLs."
             )
-            raise ImproperlyConfiguredError(INVALID_DISCORD_INVITE_URL_MESSAGE)
 
-        cls._settings["DISCORD_INVITE_URL"] = raw_discord_invite_url
+        if not validators.url(raw_custom_discord_invite_url):
+            INVALID_CUSTOM_DISCORD_INVITE_URL_MESSAGE: Final[str] = (
+                "CUSTOM_DISCORD_INVITE_URL must be a valid URL."
+            )
+            raise ImproperlyConfiguredError(INVALID_CUSTOM_DISCORD_INVITE_URL_MESSAGE)
+
+        cls._settings["CUSTOM_DISCORD_INVITE_URL"] = raw_custom_discord_invite_url
 
     @classmethod
     def _setup_ping_command_easter_egg_probability(cls) -> None:
+        raw_ping_command_easter_egg_probability_string: str = os.getenv(
+            "PING_COMMAND_EASTER_EGG_PROBABILITY", default=""
+        ).strip()
+
+        if not raw_ping_command_easter_egg_probability_string:
+            cls._settings["PING_COMMAND_EASTER_EGG_PROBABILITY"] = 1
+            return
+
         INVALID_PING_COMMAND_EASTER_EGG_PROBABILITY_MESSAGE: Final[str] = (
-            "PING_COMMAND_EASTER_EGG_PROBABILITY must be a float between & including 1 & 0."
+            "PING_COMMAND_EASTER_EGG_PROBABILITY must be a float between & including 0 to 1."
         )
 
         e: ValueError
         try:
             raw_ping_command_easter_egg_probability: float = 100 * float(
-                os.getenv("PING_COMMAND_EASTER_EGG_PROBABILITY", "0.01"),
+                raw_ping_command_easter_egg_probability_string
             )
         except ValueError as e:
             raise (
@@ -324,7 +372,7 @@ class Settings(abc.ABC):
 
         if not 0 <= raw_ping_command_easter_egg_probability <= 100:
             raise ImproperlyConfiguredError(
-                INVALID_PING_COMMAND_EASTER_EGG_PROBABILITY_MESSAGE,
+                INVALID_PING_COMMAND_EASTER_EGG_PROBABILITY_MESSAGE
             )
 
         cls._settings["PING_COMMAND_EASTER_EGG_PROBABILITY"] = (
@@ -340,7 +388,7 @@ class Settings(abc.ABC):
         )
 
         messages_file_path: Path = (
-            Path(raw_messages_file_path)
+            Path(raw_messages_file_path.strip())
             if raw_messages_file_path
             else PROJECT_ROOT / Path("messages.json")
         )
@@ -367,7 +415,7 @@ class Settings(abc.ABC):
     @classmethod
     def _setup_welcome_messages(cls) -> None:
         messages_dict: Mapping[str, object] = cls._get_messages_dict(
-            os.getenv("MESSAGES_FILE_PATH"),
+            os.getenv("MESSAGES_FILE_PATH")
         )
 
         if "welcome_messages" not in messages_dict:
@@ -375,12 +423,11 @@ class Settings(abc.ABC):
 
         WELCOME_MESSAGES_KEY_IS_VALID: Final[bool] = bool(
             isinstance(messages_dict["welcome_messages"], Iterable)
-            and messages_dict["welcome_messages"],
+            and messages_dict["welcome_messages"]
         )
         if not WELCOME_MESSAGES_KEY_IS_VALID:
             raise MessagesJSONFileValueError(
-                dict_key="welcome_messages",
-                invalid_value=messages_dict["welcome_messages"],
+                dict_key="welcome_messages", invalid_value=messages_dict["welcome_messages"]
             )
 
         cls._settings["WELCOME_MESSAGES"] = set(messages_dict["welcome_messages"])  # type: ignore[call-overload]
@@ -388,7 +435,7 @@ class Settings(abc.ABC):
     @classmethod
     def _setup_roles_messages(cls) -> None:
         messages_dict: Mapping[str, object] = cls._get_messages_dict(
-            os.getenv("MESSAGES_FILE_PATH"),
+            os.getenv("MESSAGES_FILE_PATH")
         )
 
         if "roles_messages" not in messages_dict:
@@ -399,8 +446,7 @@ class Settings(abc.ABC):
         ) and bool(messages_dict["roles_messages"])
         if not ROLES_MESSAGES_KEY_IS_VALID:
             raise MessagesJSONFileValueError(
-                dict_key="roles_messages",
-                invalid_value=messages_dict["roles_messages"],
+                dict_key="roles_messages", invalid_value=messages_dict["roles_messages"]
             )
 
         cls._settings["ROLES_MESSAGES"] = set(messages_dict["roles_messages"])  # type: ignore[call-overload]
@@ -501,45 +547,113 @@ class Settings(abc.ABC):
 
     @classmethod
     def _setup_organisation_id(cls) -> None:
-        raw_organisation_id: str | None = os.getenv("ORGANISATION_ID")
+        raw_organisation_id: str = os.getenv("ORGANISATION_ID", default="").strip()
 
-        ORGANISATION_ID_IS_VALID: Final[bool] = bool(
-            raw_organisation_id and re.fullmatch(r"\A\d{4,5}\Z", raw_organisation_id),
-        )
-
-        if not ORGANISATION_ID_IS_VALID:
+        if not raw_organisation_id or not re.fullmatch(r"\A\d{4,5}\Z", raw_organisation_id):
             INVALID_ORGANISATION_ID_MESSAGE: Final[str] = (
                 "ORGANISATION_ID must be an integer 4 to 5 digits long."
             )
-            raise ImproperlyConfiguredError(message=INVALID_ORGANISATION_ID_MESSAGE)
+            raise ImproperlyConfiguredError(INVALID_ORGANISATION_ID_MESSAGE)
 
         cls._settings["ORGANISATION_ID"] = raw_organisation_id
 
     @classmethod
-    def _setup_members_list_auth_session_cookie(cls) -> None:
-        raw_members_list_auth_session_cookie: str | None = os.getenv(
-            "MEMBERS_LIST_URL_SESSION_COOKIE",
-        )
+    def _setup_su_platform_access_cookie(cls) -> None:
+        raw_su_platform_access_cookie: str = os.getenv(
+            "SU_PLATFORM_ACCESS_COOKIE",
+            default="",
+        ).strip()
 
-        MEMBERS_LIST_AUTH_SESSION_COOKIE_IS_VALID: Final[bool] = bool(
-            raw_members_list_auth_session_cookie
-            and re.fullmatch(r"\A[A-Fa-f\d]{128,256}\Z", raw_members_list_auth_session_cookie),
-        )
-        if not MEMBERS_LIST_AUTH_SESSION_COOKIE_IS_VALID:
-            INVALID_MEMBERS_LIST_AUTH_SESSION_COOKIE_MESSAGE: Final[str] = (
-                "MEMBERS_LIST_URL_SESSION_COOKIE must be a valid .ASPXAUTH cookie."
+        if not raw_su_platform_access_cookie or not re.fullmatch(
+            r"\A[A-Fa-f\d]{128,256}\Z", raw_su_platform_access_cookie
+        ):
+            INVALID_SU_PLATFORM_ACCESS_COOKIE_MESSAGE: Final[str] = (
+                "SU_PLATFORM_ACCESS_COOKIE must be a valid .ASPXAUTH cookie."
             )
-            raise ImproperlyConfiguredError(INVALID_MEMBERS_LIST_AUTH_SESSION_COOKIE_MESSAGE)
+            raise ImproperlyConfiguredError(INVALID_SU_PLATFORM_ACCESS_COOKIE_MESSAGE)
 
-        cls._settings["MEMBERS_LIST_AUTH_SESSION_COOKIE"] = (
-            raw_members_list_auth_session_cookie
+        cls._settings["SU_PLATFORM_ACCESS_COOKIE"] = raw_su_platform_access_cookie
+
+    @classmethod
+    def _setup_auto_su_platform_access_cookie_checking(cls) -> None:
+        raw_auto_auth_session_cookie_checking: str = (
+            os.getenv("AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING", "False").lower().strip()
+        )
+
+        if raw_auto_auth_session_cookie_checking not in TRUE_VALUES | FALSE_VALUES:
+            INVALID_AUTO_AUTH_CHECKING_MESSAGE: Final[str] = (
+                "AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING must be a boolean value."
+            )
+            raise ImproperlyConfiguredError(INVALID_AUTO_AUTH_CHECKING_MESSAGE)
+
+        cls._settings["AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING"] = (
+            raw_auto_auth_session_cookie_checking in TRUE_VALUES
+        )
+
+    @classmethod
+    def _setup_auto_su_platform_access_cookie_checking_interval(cls) -> None:
+        if "AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING" not in cls._settings:
+            INVALID_SETUP_ORDER_MESSAGE: Final[str] = (
+                "Invalid setup order: AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING must be set up "
+                "before AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL can be set up."
+            )
+            raise RuntimeError(INVALID_SETUP_ORDER_MESSAGE)
+
+        if not cls._settings["AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING"]:
+            cls._settings["AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL"] = {"hours": 24}
+            return
+
+        raw_auto_su_platform_access_cookie_checking_interval: re.Match[str] | None = (
+            re.fullmatch(
+                r"\A(?:(?P<seconds>(?:\d*\.)?\d+)s)?(?:(?P<minutes>(?:\d*\.)?\d+)m)?(?:(?P<hours>(?:\d*\.)?\d+)h)?(?:(?P<days>(?:\d*\.)?\d+)d)?(?:(?P<weeks>(?:\d*\.)?\d+)w)?\Z",
+                os.getenv("AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL", "24h")
+                .strip()
+                .lower()
+                .replace(" ", ""),
+            )
+        )
+
+        if not raw_auto_su_platform_access_cookie_checking_interval:
+            INVALID_AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL_MESSAGE: Final[str] = (
+                "AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL must contain the delay "
+                "in any combination of seconds, minutes, hours, days or weeks."
+            )
+            logger.debug(raw_auto_su_platform_access_cookie_checking_interval)
+            raise ImproperlyConfiguredError(
+                INVALID_AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL_MESSAGE
+            )
+
+        raw_timedelta_auto_su_platform_access_cookie_checking_interval: Mapping[str, float] = {
+            key: float(stripped_value)
+            for key, value in (
+                raw_auto_su_platform_access_cookie_checking_interval.groupdict().items()
+            )
+            if value and (stripped_value := value.strip())
+        }
+
+        if (
+            timedelta(
+                **raw_timedelta_auto_su_platform_access_cookie_checking_interval
+            ).total_seconds()
+            <= 3
+        ):
+            TOO_SMALL_AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL_MESSAGE: Final[str] = (
+                "AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL "
+                "must be greater than 3 seconds."
+            )
+            raise ImproperlyConfiguredError(
+                TOO_SMALL_AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL_MESSAGE,
+            )
+
+        cls._settings["AUTO_SU_PLATFORM_ACCESS_COOKIE_CHECKING_INTERVAL"] = (
+            raw_timedelta_auto_su_platform_access_cookie_checking_interval
         )
 
     @classmethod
     def _setup_send_introduction_reminders(cls) -> None:
-        raw_send_introduction_reminders: str | bool = str(
-            os.getenv("SEND_INTRODUCTION_REMINDERS", "Once"),
-        ).lower()
+        raw_send_introduction_reminders: str | bool = (
+            os.getenv("SEND_INTRODUCTION_REMINDERS", "Once").lower().strip()
+        )
 
         if raw_send_introduction_reminders not in VALID_SEND_INTRODUCTION_REMINDERS_VALUES:
             INVALID_SEND_INTRODUCTION_REMINDERS_MESSAGE: Final[str] = (
@@ -566,7 +680,10 @@ class Settings(abc.ABC):
 
         raw_send_introduction_reminders_delay: re.Match[str] | None = re.fullmatch(
             r"\A(?:(?P<seconds>(?:\d*\.)?\d+)s)?(?:(?P<minutes>(?:\d*\.)?\d+)m)?(?:(?P<hours>(?:\d*\.)?\d+)h)?(?:(?P<days>(?:\d*\.)?\d+)d)?(?:(?P<weeks>(?:\d*\.)?\d+)w)?\Z",
-            str(os.getenv("SEND_INTRODUCTION_REMINDERS_DELAY", "40h")),
+            os.getenv("SEND_INTRODUCTION_REMINDERS_DELAY", "40h")
+            .strip()
+            .lower()
+            .replace(" ", ""),
         )
 
         raw_timedelta_send_introduction_reminders_delay: timedelta = timedelta()
@@ -578,7 +695,7 @@ class Settings(abc.ABC):
                     "in any combination of seconds, minutes, hours, days or weeks."
                 )
                 raise ImproperlyConfiguredError(
-                    INVALID_SEND_INTRODUCTION_REMINDERS_DELAY_MESSAGE,
+                    INVALID_SEND_INTRODUCTION_REMINDERS_DELAY_MESSAGE
                 )
 
             raw_timedelta_send_introduction_reminders_delay = timedelta(
@@ -586,16 +703,15 @@ class Settings(abc.ABC):
                     key: float(value)
                     for key, value in raw_send_introduction_reminders_delay.groupdict().items()
                     if value
-                },
+                }
             )
 
             if raw_timedelta_send_introduction_reminders_delay < timedelta(days=1):
                 TOO_SMALL_SEND_INTRODUCTION_REMINDERS_DELAY_MESSAGE: Final[str] = (
-                    "SEND_INTRODUCTION_REMINDERS_DELAY must be longer than or equal to 1 day "
-                    "(in any allowed format)."
+                    "SEND_INTRODUCTION_REMINDERS_DELAY must be longer than or equal to 1 day."
                 )
                 raise ImproperlyConfiguredError(
-                    TOO_SMALL_SEND_INTRODUCTION_REMINDERS_DELAY_MESSAGE,
+                    TOO_SMALL_SEND_INTRODUCTION_REMINDERS_DELAY_MESSAGE
                 )
 
         cls._settings["SEND_INTRODUCTION_REMINDERS_DELAY"] = (
@@ -613,11 +729,14 @@ class Settings(abc.ABC):
 
         raw_send_introduction_reminders_interval: re.Match[str] | None = re.fullmatch(
             r"\A(?:(?P<seconds>(?:\d*\.)?\d+)s)?(?:(?P<minutes>(?:\d*\.)?\d+)m)?(?:(?P<hours>(?:\d*\.)?\d+)h)?\Z",
-            str(os.getenv("SEND_INTRODUCTION_REMINDERS_INTERVAL", "6h")),
+            os.getenv("SEND_INTRODUCTION_REMINDERS_INTERVAL", "6h")
+            .strip()
+            .lower()
+            .replace(" ", ""),
         )
 
         raw_timedelta_details_send_introduction_reminders_interval: Mapping[str, float] = {
-            "hours": 6,
+            "hours": 6
         }
 
         if cls._settings["SEND_INTRODUCTION_REMINDERS"]:
@@ -627,7 +746,7 @@ class Settings(abc.ABC):
                     "in any combination of seconds, minutes or hours."
                 )
                 raise ImproperlyConfiguredError(
-                    INVALID_SEND_INTRODUCTION_REMINDERS_INTERVAL_MESSAGE,
+                    INVALID_SEND_INTRODUCTION_REMINDERS_INTERVAL_MESSAGE
                 )
 
             raw_timedelta_details_send_introduction_reminders_interval = {
@@ -636,15 +755,28 @@ class Settings(abc.ABC):
                 if value
             }
 
+            if (
+                timedelta(
+                    **raw_timedelta_details_send_introduction_reminders_interval
+                ).total_seconds()
+                <= 3
+            ):
+                TOO_SMALL_SEND_INTRODUCTION_REMINDERS_INTERVAL_MESSAGE: Final[str] = (
+                    "SEND_INTRODUCTION_REMINDERS_INTERVAL must be longer than 3 seconds."
+                )
+                raise ImproperlyConfiguredError(
+                    TOO_SMALL_SEND_INTRODUCTION_REMINDERS_INTERVAL_MESSAGE
+                )
+
         cls._settings["SEND_INTRODUCTION_REMINDERS_INTERVAL"] = (
             raw_timedelta_details_send_introduction_reminders_interval
         )
 
     @classmethod
     def _setup_send_get_roles_reminders(cls) -> None:
-        raw_send_get_roles_reminders: str = str(
-            os.getenv("SEND_GET_ROLES_REMINDERS", "True"),
-        ).lower()
+        raw_send_get_roles_reminders: str = (
+            os.getenv("SEND_GET_ROLES_REMINDERS", "True").lower().strip()
+        )
 
         if raw_send_get_roles_reminders not in TRUE_VALUES | FALSE_VALUES:
             INVALID_SEND_GET_ROLES_REMINDERS_MESSAGE: Final[str] = (
@@ -665,7 +797,10 @@ class Settings(abc.ABC):
 
         raw_send_get_roles_reminders_delay: re.Match[str] | None = re.fullmatch(
             r"\A(?:(?P<seconds>(?:\d*\.)?\d+)s)?(?:(?P<minutes>(?:\d*\.)?\d+)m)?(?:(?P<hours>(?:\d*\.)?\d+)h)?(?:(?P<days>(?:\d*\.)?\d+)d)?(?:(?P<weeks>(?:\d*\.)?\d+)w)?\Z",
-            str(os.getenv("SEND_GET_ROLES_REMINDERS_DELAY", "40h")),
+            os.getenv("SEND_GET_ROLES_REMINDERS_DELAY", "40h")
+            .strip()
+            .lower()
+            .replace(" ", ""),
         )
 
         raw_timedelta_send_get_roles_reminders_delay: timedelta = timedelta()
@@ -676,25 +811,22 @@ class Settings(abc.ABC):
                     "SEND_GET_ROLES_REMINDERS_DELAY must contain the delay "
                     "in any combination of seconds, minutes, hours, days or weeks."
                 )
-                raise ImproperlyConfiguredError(
-                    INVALID_SEND_GET_ROLES_REMINDERS_DELAY_MESSAGE,
-                )
+                raise ImproperlyConfiguredError(INVALID_SEND_GET_ROLES_REMINDERS_DELAY_MESSAGE)
 
             raw_timedelta_send_get_roles_reminders_delay = timedelta(
                 **{
                     key: float(value)
                     for key, value in raw_send_get_roles_reminders_delay.groupdict().items()
                     if value
-                },
+                }
             )
 
             if raw_timedelta_send_get_roles_reminders_delay < timedelta(days=1):
                 TOO_SMALL_SEND_GET_ROLES_REMINDERS_DELAY_MESSAGE: Final[str] = (
-                    "SEND_SEND_GET_ROLES_REMINDERS_DELAY "
-                    "must be longer than or equal to 1 day (in any allowed format)."
+                    "SEND_GET_ROLES_REMINDERS_DELAY must be longer than or equal to 1 day."
                 )
                 raise ImproperlyConfiguredError(
-                    TOO_SMALL_SEND_GET_ROLES_REMINDERS_DELAY_MESSAGE,
+                    TOO_SMALL_SEND_GET_ROLES_REMINDERS_DELAY_MESSAGE
                 )
 
         cls._settings["SEND_GET_ROLES_REMINDERS_DELAY"] = (
@@ -712,14 +844,15 @@ class Settings(abc.ABC):
 
         raw_advanced_send_get_roles_reminders_interval: re.Match[str] | None = re.fullmatch(
             r"\A(?:(?P<seconds>(?:\d*\.)?\d+)s)?(?:(?P<minutes>(?:\d*\.)?\d+)m)?(?:(?P<hours>(?:\d*\.)?\d+)h)?\Z",
-            str(os.getenv("ADVANCED_SEND_GET_ROLES_REMINDERS_INTERVAL", "24h")),
+            os.getenv("ADVANCED_SEND_GET_ROLES_REMINDERS_INTERVAL", "24h")
+            .strip()
+            .lower()
+            .replace(" ", ""),
         )
 
         raw_timedelta_details_advanced_send_get_roles_reminders_interval: Mapping[
             str, float
-        ] = {
-            "hours": 24,
-        }
+        ] = {"hours": 24}
 
         if cls._settings["SEND_GET_ROLES_REMINDERS"]:
             if not raw_advanced_send_get_roles_reminders_interval:
@@ -728,7 +861,7 @@ class Settings(abc.ABC):
                     "in any combination of seconds, minutes or hours."
                 )
                 raise ImproperlyConfiguredError(
-                    INVALID_ADVANCED_SEND_GET_ROLES_REMINDERS_INTERVAL_MESSAGE,
+                    INVALID_ADVANCED_SEND_GET_ROLES_REMINDERS_INTERVAL_MESSAGE
                 )
 
             raw_timedelta_details_advanced_send_get_roles_reminders_interval = {
@@ -747,50 +880,78 @@ class Settings(abc.ABC):
     def _setup_statistics_days(cls) -> None:
         e: ValueError
         try:
-            raw_statistics_days: float = float(os.getenv("STATISTICS_DAYS", "30"))
+            raw_statistics_days: float = float(os.getenv("STATISTICS_DAYS", "30").strip())
         except ValueError as e:
             INVALID_STATISTICS_DAYS_MESSAGE: Final[str] = (
                 "STATISTICS_DAYS must contain the statistics period in days."
             )
             raise ImproperlyConfiguredError(INVALID_STATISTICS_DAYS_MESSAGE) from e
 
+        if raw_statistics_days < 1:
+            TOO_SMALL_STATISTICS_DAYS_MESSAGE: Final[str] = (
+                "STATISTICS_DAYS cannot be less than 1 day."
+            )
+            raise ImproperlyConfiguredError(TOO_SMALL_STATISTICS_DAYS_MESSAGE)
+
         cls._settings["STATISTICS_DAYS"] = timedelta(days=raw_statistics_days)
 
     @classmethod
     def _setup_statistics_roles(cls) -> None:
-        raw_statistics_roles: str | None = os.getenv("STATISTICS_ROLES")
+        raw_statistics_roles: str = os.getenv("STATISTICS_ROLES", default="").strip()
 
         if not raw_statistics_roles:
             cls._settings["STATISTICS_ROLES"] = DEFAULT_STATISTICS_ROLES
+            return
 
-        else:
-            cls._settings["STATISTICS_ROLES"] = {
-                raw_statistics_role
-                for raw_statistics_role in raw_statistics_roles.split(",")
-                if raw_statistics_role
-            }
+        statistics_roles: AbstractSet[str] = {
+            raw_statistics_role.strip()
+            for raw_statistics_role in raw_statistics_roles.split(",")
+            if raw_statistics_role.strip()
+        }
+
+        cls._settings["STATISTICS_ROLES"] = (
+            statistics_roles if statistics_roles else DEFAULT_STATISTICS_ROLES
+        )
 
     @classmethod
     def _setup_moderation_document_url(cls) -> None:
-        raw_moderation_document_url: str | None = os.getenv("MODERATION_DOCUMENT_URL")
-
-        MODERATION_DOCUMENT_URL_IS_VALID: Final[bool] = bool(
-            raw_moderation_document_url and validators.url(raw_moderation_document_url),
+        INVALID_MODERATION_DOCUMENT_URL_MESSAGE: Final[str] = (
+            "MODERATION_DOCUMENT_URL must be a valid URL."
         )
-        if not MODERATION_DOCUMENT_URL_IS_VALID:
-            MODERATION_DOCUMENT_URL_MESSAGE: Final[str] = (
-                "MODERATION_DOCUMENT_URL must be a valid URL."
+
+        raw_moderation_document_url: str = (
+            os.getenv("MODERATION_DOCUMENT_URL", default="").strip().lower()
+        )
+
+        if not raw_moderation_document_url:
+            raise ImproperlyConfiguredError(INVALID_MODERATION_DOCUMENT_URL_MESSAGE)
+
+        if not raw_moderation_document_url.startswith("https://"):
+            if "://" in raw_moderation_document_url:
+                INVALID_MODERATION_DOCUMENT_URL_PROTOCOL_MESSAGE: Final[str] = (
+                    "Only HTTPS is supported as a protocol for MODERATION_DOCUMENT_URL."
+                )
+                raise ImproperlyConfiguredError(
+                    INVALID_MODERATION_DOCUMENT_URL_PROTOCOL_MESSAGE
+                )
+
+            raw_moderation_document_url = "https://" + raw_moderation_document_url
+            logger.warning(
+                "MODERATION_DOCUMENT_URL was missing a URL protocol. "
+                "Please ensure all URLs are valid HTTPS URLs."
             )
-            raise ImproperlyConfiguredError(MODERATION_DOCUMENT_URL_MESSAGE)
+
+        if not validators.url(raw_moderation_document_url):
+            raise ImproperlyConfiguredError(INVALID_MODERATION_DOCUMENT_URL_MESSAGE)
 
         cls._settings["MODERATION_DOCUMENT_URL"] = raw_moderation_document_url
 
     @classmethod
     def _setup_strike_performed_manually_warning_location(cls) -> None:
         raw_strike_performed_manually_warning_location: str = os.getenv(
-            "MANUAL_MODERATION_WARNING_MESSAGE_LOCATION",
-            "DM",
-        )
+            "MANUAL_MODERATION_WARNING_MESSAGE_LOCATION", default="DM"
+        ).strip()
+
         if not raw_strike_performed_manually_warning_location:
             STRIKE_PERFORMED_MANUALLY_WARNING_LOCATION_MESSAGE: Final[str] = (
                 "MANUAL_MODERATION_WARNING_MESSAGE_LOCATION must be a valid name "
@@ -804,9 +965,9 @@ class Settings(abc.ABC):
 
     @classmethod
     def _setup_auto_add_committee_to_threads(cls) -> None:
-        raw_auto_add_committee_to_threads: str = str(
-            os.getenv("AUTO_ADD_COMMITTEE_TO_THREADS", "True")
-        ).lower()
+        raw_auto_add_committee_to_threads: str = (
+            os.getenv("AUTO_ADD_COMMITTEE_TO_THREADS", "True").lower().strip()
+        )
 
         if raw_auto_add_committee_to_threads not in TRUE_VALUES | FALSE_VALUES:
             INVALID_AUTO_ADD_COMMITTEE_TO_THREADS_MESSAGE: Final[str] = (
@@ -844,10 +1005,12 @@ class Settings(abc.ABC):
             cls._setup_welcome_messages()
             cls._setup_roles_messages()
             cls._setup_organisation_id()
-            cls._setup_members_list_auth_session_cookie()
+            cls._setup_su_platform_access_cookie()
+            cls._setup_auto_su_platform_access_cookie_checking()
+            cls._setup_auto_su_platform_access_cookie_checking_interval()
             cls._setup_membership_perks_url()
             cls._setup_purchase_membership_url()
-            cls._setup_discord_invite_url()
+            cls._setup_custom_discord_invite_url()
             cls._setup_send_introduction_reminders()
             cls._setup_send_introduction_reminders_delay()
             cls._setup_send_introduction_reminders_interval()
@@ -891,8 +1054,6 @@ def run_setup() -> None:
     logger.debug("Begin database setup")
 
     importlib.import_module("db")
-    from django.core import management
-
-    management.call_command("migrate")
+    importlib.import_module("django.core.management").call_command("migrate")
 
     logger.debug("Database setup completed")

@@ -17,7 +17,7 @@ from .counts import get_channel_message_counts, get_server_message_counts
 from .graphs import amount_of_time_formatter, plot_bar_chart
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterable, Sequence
+    from collections.abc import AsyncIterable, Mapping, Sequence
     from typing import Final
 
     from utils import TeXBotApplicationContext
@@ -64,8 +64,7 @@ class StatsCommandsCog(TeXBotBaseCog):
     )
 
     @stats.command(
-        name="channel",
-        description="Displays the stats for the current/a given channel.",
+        name="channel", description="Displays the stats for the current/a given channel."
     )
     @discord.option(  # type: ignore[no-untyped-call, misc]
         name="channel",
@@ -94,32 +93,28 @@ class StatsCommandsCog(TeXBotBaseCog):
         if str_channel_id:
             if not re.fullmatch(r"\A\d{17,20}\Z", str_channel_id):
                 await self.command_send_error(
-                    ctx,
-                    message=f"{str_channel_id!r} is not a valid channel ID.",
+                    ctx, message=f"{str_channel_id!r} is not a valid channel ID."
                 )
                 return
 
             channel_id = int(str_channel_id)
 
         channel: discord.TextChannel | None = discord.utils.get(
-            main_guild.text_channels,
-            id=channel_id,
+            main_guild.text_channels, id=channel_id
         )
         if not channel:
             await self.command_send_error(
-                ctx,
-                message=f"Text channel with ID {str(channel_id)!r} does not exist.",
+                ctx, message=f"Text channel with ID {str(channel_id)!r} does not exist."
             )
             return
 
         await ctx.defer(ephemeral=True)
 
-        message_counts: dict[str, int] = await get_channel_message_counts(channel=channel)
+        message_counts: Mapping[str, int] = await get_channel_message_counts(channel=channel)
 
         if math.ceil(max(message_counts.values()) / 15) < 1:
             await self.command_send_error(
-                ctx=ctx,
-                message="There are not enough messages sent in this channel.",
+                ctx=ctx, message="There are not enough messages sent in this channel."
             )
             return
 
@@ -172,7 +167,7 @@ class StatsCommandsCog(TeXBotBaseCog):
 
         await ctx.defer(ephemeral=True)
 
-        message_counts: dict[str, dict[str, int]] = await get_server_message_counts(
+        message_counts: Mapping[str, Mapping[str, int]] = await get_server_message_counts(
             guild=main_guild, guest_role=guest_role
         )
 
@@ -241,8 +236,7 @@ class StatsCommandsCog(TeXBotBaseCog):
         )
 
     @stats.command(
-        name="self",
-        description="Displays stats about the number of messages you have sent.",
+        name="self", description="Displays stats about the number of messages you have sent."
     )
     @CommandChecks.check_interaction_user_in_main_guild
     async def user_stats(self, ctx: "TeXBotApplicationContext") -> None:
@@ -275,17 +269,15 @@ class StatsCommandsCog(TeXBotBaseCog):
         channel: discord.TextChannel
         for channel in main_guild.text_channels:
             member_has_access_to_channel: bool = channel.permissions_for(
-                guest_role,
-            ).is_superset(
-                discord.Permissions(send_messages=True),
-            )
+                guest_role
+            ).is_superset(discord.Permissions(send_messages=True))
             if not member_has_access_to_channel:
                 continue
 
             message_counts[f"#{channel.name}"] = 0
 
             message_history_period: AsyncIterable[discord.Message] = channel.history(
-                after=discord.utils.utcnow() - settings["STATISTICS_DAYS"],
+                after=discord.utils.utcnow() - settings["STATISTICS_DAYS"]
             )
             message: discord.Message
             async for message in message_history_period:
@@ -294,10 +286,7 @@ class StatsCommandsCog(TeXBotBaseCog):
                     message_counts["Total"] += 1
 
         if math.ceil(max(message_counts.values()) / 15) < 1:
-            await self.command_send_error(
-                ctx,
-                message="You have not sent enough messages.",
-            )
+            await self.command_send_error(ctx, message="You have not sent enough messages.")
             return
 
         await ctx.respond(
@@ -348,7 +337,7 @@ class StatsCommandsCog(TeXBotBaseCog):
         await ctx.defer(ephemeral=True)
 
         left_member_counts: dict[str, int] = {
-            "Total": await LeftDiscordMember.objects.acount(),
+            "Total": await LeftDiscordMember.objects.acount()
         }
 
         role_name: str
@@ -373,8 +362,7 @@ class StatsCommandsCog(TeXBotBaseCog):
 
         if math.ceil(max(left_member_counts.values()) / 15) < 1:
             await self.command_send_error(
-                ctx,
-                message="Not enough data about members that have left the server.",
+                ctx, message="Not enough data about members that have left the server."
             )
             return
 
@@ -424,5 +412,5 @@ class StatsCommandsCog(TeXBotBaseCog):
                 f"@{role.name}"
                 for role in member.roles
                 if role.name.lower().strip("@").strip() != "everyone"
-            },
+            }
         )

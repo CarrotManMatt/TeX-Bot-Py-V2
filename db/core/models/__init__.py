@@ -10,7 +10,7 @@ from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from .utils import AsyncBaseModel, BaseDiscordMemberWrapper, DiscordMember
+from .utils import AsyncBaseModel, DiscordMember
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -29,7 +29,7 @@ __all__: "Sequence[str]" = (
 )
 
 
-class AssignedCommitteeAction(BaseDiscordMemberWrapper):
+class AssignedCommitteeAction(AsyncBaseModel):
     """Model to represent an action that has been assigned to a Discord committee-member."""
 
     class Status(models.TextChoices):
@@ -43,7 +43,7 @@ class AssignedCommitteeAction(BaseDiscordMemberWrapper):
 
     INSTANCES_NAME_PLURAL: str = "Assigned Committee Actions"
 
-    discord_member = models.ForeignKey(  # type: ignore[assignment]
+    discord_member = models.ForeignKey(
         DiscordMember,
         on_delete=models.CASCADE,
         related_name="assigned_committee_actions",
@@ -52,39 +52,29 @@ class AssignedCommitteeAction(BaseDiscordMemberWrapper):
         null=False,
         unique=False,
     )
-    description = models.TextField(
-        "Description",
-        max_length=200,
-        null=False,
-        blank=False,
-    )
+    description = models.TextField("Description", max_length=200, null=False, blank=False)
     status = models.CharField(
-        max_length=3,
-        choices=Status,
-        default=Status.NOT_STARTED,
-        null=False,
-        blank=False,
+        max_length=3, choices=Status, default=Status.NOT_STARTED, null=False, blank=False
     )
 
     class Meta:  # noqa: D106
         verbose_name = "Assigned Committee Action"
         constraints = [  # noqa: RUF012
             models.UniqueConstraint(
-                fields=["discord_member", "description"],
-                name="unique_user_action",
-            ),
+                fields=["discord_member", "description"], name="unique_user_action"
+            )
         ]
 
     @override
     def __repr__(self) -> str:
-        return f"<{self._meta.verbose_name}: {self.discord_member}, {self.description}"  # type: ignore[has-type]
+        return f"<{self._meta.verbose_name}: {self.discord_member}, {self.description}"
 
     @override
     def __str__(self) -> str:
-        return f"{self.discord_member}: {self.description}"  # type: ignore[has-type]
+        return f"{self.discord_member}: {self.description}"
 
 
-class IntroductionReminderOptOutMember(BaseDiscordMemberWrapper):
+class IntroductionReminderOptOutMember(AsyncBaseModel):
     """
     Model to represent a Discord member that has opted out of introduction reminders.
 
@@ -94,7 +84,7 @@ class IntroductionReminderOptOutMember(BaseDiscordMemberWrapper):
 
     INSTANCES_NAME_PLURAL: str = "Introduction Reminder Opt-Out Member objects"
 
-    discord_member = models.OneToOneField(  # type: ignore[assignment]
+    discord_member = models.OneToOneField(
         DiscordMember,
         on_delete=models.CASCADE,
         related_name="opted_out_of_introduction_reminders",
@@ -109,7 +99,7 @@ class IntroductionReminderOptOutMember(BaseDiscordMemberWrapper):
         verbose_name_plural = "Discord Members that have Opted-Out of Introduction Reminders"
 
 
-class SentOneOffIntroductionReminderMember(BaseDiscordMemberWrapper):
+class SentOneOffIntroductionReminderMember(AsyncBaseModel):
     """
     Represents a Discord member that has been sent a one-off introduction reminder.
 
@@ -120,7 +110,7 @@ class SentOneOffIntroductionReminderMember(BaseDiscordMemberWrapper):
 
     INSTANCES_NAME_PLURAL: str = "Sent One-Off Introduction Reminder Member objects"
 
-    discord_member = models.OneToOneField(  # type: ignore[assignment]
+    discord_member = models.OneToOneField(
         DiscordMember,
         on_delete=models.CASCADE,
         related_name="sent_one_off_introduction_reminder",
@@ -139,7 +129,7 @@ class SentOneOffIntroductionReminderMember(BaseDiscordMemberWrapper):
         )
 
 
-class SentGetRolesReminderMember(BaseDiscordMemberWrapper):
+class SentGetRolesReminderMember(AsyncBaseModel):
     """
     Represents a Discord member that has already been sent an opt-in roles reminder.
 
@@ -153,7 +143,7 @@ class SentGetRolesReminderMember(BaseDiscordMemberWrapper):
 
     INSTANCES_NAME_PLURAL: str = "Sent Get Roles Reminder Member objects"
 
-    discord_member = models.OneToOneField(  # type: ignore[assignment]
+    discord_member = models.OneToOneField(
         DiscordMember,
         on_delete=models.CASCADE,
         related_name="sent_get_roles_reminder",
@@ -194,7 +184,7 @@ class GroupMadeMember(AsyncBaseModel):
             RegexValidator(
                 r"\A[A-Fa-f\d]{64}\Z",
                 "hashed_group_member_id must be a valid sha256 hex-digest.",
-            ),
+            )
         ],
     )
 
@@ -250,12 +240,12 @@ class GroupMadeMember(AsyncBaseModel):
         return super().get_proxy_field_names() | {"group_member_id"}
 
 
-class DiscordReminder(BaseDiscordMemberWrapper):
+class DiscordReminder(AsyncBaseModel):
     """Represents a reminder that a Discord member has requested to be sent to them."""
 
     INSTANCES_NAME_PLURAL: str = "Reminders"
 
-    discord_member = models.ForeignKey(  # type: ignore[assignment]
+    discord_member = models.ForeignKey(
         DiscordMember,
         on_delete=models.CASCADE,
         related_name="reminders",
@@ -265,10 +255,7 @@ class DiscordReminder(BaseDiscordMemberWrapper):
         unique=False,
     )
     message = models.TextField(
-        "Message to remind User",
-        max_length=1500,
-        null=False,
-        blank=True,
+        "Message to remind User", max_length=1500, null=False, blank=True
     )
     _channel_id = models.CharField(
         "Discord Channel ID of the channel that the reminder needs to be sent in",
@@ -280,7 +267,7 @@ class DiscordReminder(BaseDiscordMemberWrapper):
             RegexValidator(
                 r"\A\d{17,20}\Z",
                 "channel_id must be a valid Discord channel ID (see https://docs.pycord.dev/en/stable/api/abcs.html#discord.abc.Snowflake.id)",
-            ),
+            )
         ],
     )
     _channel_type = models.IntegerField(
@@ -292,10 +279,7 @@ class DiscordReminder(BaseDiscordMemberWrapper):
         blank=True,
     )
     send_datetime = models.DateTimeField(
-        "Date & time to send reminder",
-        unique=False,
-        null=False,
-        blank=False,
+        "Date & time to send reminder", unique=False, null=False, blank=False
     )
 
     @property
@@ -332,13 +316,13 @@ class DiscordReminder(BaseDiscordMemberWrapper):
             models.UniqueConstraint(
                 fields=["discord_member", "message", "_channel_id"],
                 name="unique_user_channel_message",
-            ),
+            )
         ]
 
     @override
     def __str__(self) -> str:
         return (
-            f"{self.discord_member}"  # type: ignore[has-type]
+            f"{self.discord_member}"
             f"{
                 ''
                 if not self.message
@@ -349,7 +333,7 @@ class DiscordReminder(BaseDiscordMemberWrapper):
     @override
     def __repr__(self) -> str:
         return (
-            f"<{self._meta.verbose_name}: {self.discord_member}, "  # type: ignore[has-type]
+            f"<{self._meta.verbose_name}: {self.discord_member}, "
             f"{self.channel_id!r}, {self.send_datetime!r}>"
         )
 
@@ -422,9 +406,7 @@ class LeftDiscordMember(AsyncBaseModel):
     def clean(self) -> None:
         if any(not isinstance(role, str) for role in self.roles):
             raise ValidationError(
-                {
-                    "_roles": "Roles must be a set of strings representing the role names.",
-                },
+                {"_roles": "Roles must be a set of strings representing the role names."},
                 code="invalid",
             )
 
@@ -434,7 +416,7 @@ class LeftDiscordMember(AsyncBaseModel):
         return super().get_proxy_field_names() | {"roles"}
 
 
-class DiscordMemberStrikes(BaseDiscordMemberWrapper):
+class DiscordMemberStrikes(AsyncBaseModel):
     """
     Represents a Discord member that has been given one or more strikes.
 
@@ -449,7 +431,7 @@ class DiscordMemberStrikes(BaseDiscordMemberWrapper):
 
     INSTANCES_NAME_PLURAL: str = "Discord Member's Strikes"
 
-    discord_member = models.OneToOneField(  # type: ignore[assignment]
+    discord_member = models.OneToOneField(
         DiscordMember,
         on_delete=models.CASCADE,
         related_name="strikes",
@@ -458,6 +440,7 @@ class DiscordMemberStrikes(BaseDiscordMemberWrapper):
         null=False,
         primary_key=True,
     )
+
     strikes = models.PositiveIntegerField(
         "Number of strikes",
         null=False,
@@ -478,8 +461,8 @@ class DiscordMemberStrikes(BaseDiscordMemberWrapper):
 
     @override
     def __str__(self) -> str:
-        return f"{self.discord_member}: {self.strikes}"  # type: ignore[has-type]
+        return f"{self.discord_member}: {self.strikes}"
 
     @override
     def __repr__(self) -> str:
-        return f"<{self._meta.verbose_name}: {self.discord_member}, {self.strikes!r}>"  # type: ignore[has-type]
+        return f"<{self._meta.verbose_name}: {self.discord_member}, {self.strikes!r}>"

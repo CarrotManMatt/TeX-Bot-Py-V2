@@ -15,6 +15,10 @@ from .annual_handover_and_reset import (
 )
 from .april_fools import AprilFoolsTaskCog
 from .archive import ArchiveCommandCog
+from .check_su_platform_authorisation import (
+    CheckSUPlatformAuthorisationCommandCog,
+    CheckSUPlatformAuthorisationTaskCog,
+)
 from .command_error import CommandErrorCog
 from .committee_actions_tracking import (
     CommitteeActionsTrackingContextCommandsCog,
@@ -22,7 +26,7 @@ from .committee_actions_tracking import (
 )
 from .delete_all import DeleteAllCommandsCog
 from .edit_message import EditMessageCommandCog
-from .get_token_authorisation import GetTokenAuthorisationCommandCog
+from .everest import EverestCommandCog
 from .induct import (
     EnsureMembersInductedCommandCog,
     InductContextCommandsCog,
@@ -54,6 +58,8 @@ __all__: "Sequence[str]" = (
     "AnnualYearChannelsIncrementCommandCog",
     "AprilFoolsTaskCog",
     "ArchiveCommandCog",
+    "CheckSUPlatformAuthorisationCommandCog",
+    "CheckSUPlatformAuthorisationTaskCog",
     "ClearRemindersBacklogTaskCog",
     "CommandErrorCog",
     "CommitteeActionsTrackingContextCommandsCog",
@@ -62,7 +68,7 @@ __all__: "Sequence[str]" = (
     "DeleteAllCommandsCog",
     "EditMessageCommandCog",
     "EnsureMembersInductedCommandCog",
-    "GetTokenAuthorisationCommandCog",
+    "EverestCommandCog",
     "InductContextCommandsCog",
     "InductSendMessageCog",
     "InductSlashCommandCog",
@@ -103,7 +109,8 @@ def setup(bot: "TeXBot") -> None:
         DeleteAllCommandsCog,
         EditMessageCommandCog,
         EnsureMembersInductedCommandCog,
-        GetTokenAuthorisationCommandCog,
+        EverestCommandCog,
+        CheckSUPlatformAuthorisationCommandCog,
         InductContextCommandsCog,
         InductSendMessageCog,
         InductSlashCommandCog,
@@ -123,6 +130,7 @@ def setup(bot: "TeXBot") -> None:
         StatsCommandsCog,
         StrikeCommandCog,
         StrikeContextCommandsCog,
+        CheckSUPlatformAuthorisationTaskCog,
         WriteRolesCommandCog,
     )
     Cog: type[TeXBotBaseCog]
