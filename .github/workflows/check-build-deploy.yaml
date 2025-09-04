@@ -12,7 +12,7 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             - name: Install uv
               uses: astral-sh/setup-uv@v6
@@ -31,10 +31,10 @@ jobs:
             UV_PYTHON_DOWNLOADS: never
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             - name: Set Up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
                 python-version-file: .python-version
 
@@ -67,10 +67,10 @@ jobs:
             UV_PYTHON_DOWNLOADS: never
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             - name: Set Up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
                 python-version-file: .python-version
 
@@ -112,10 +112,10 @@ jobs:
             UV_PYTHON_DOWNLOADS: never
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             - name: Set Up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
                 python-version-file: .python-version
 
@@ -141,10 +141,10 @@ jobs:
             UV_PYTHON_DOWNLOADS: never
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             - name: Set Up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
                 python-version-file: .python-version
 
@@ -189,10 +189,10 @@ jobs:
             UV_PYTHON_DOWNLOADS: never
 
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@v5
 
             - name: Set Up Python
-              uses: actions/setup-python@v5
+              uses: actions/setup-python@v6
               with:
                 python-version-file: .python-version
 
@@ -236,7 +236,7 @@ jobs:
 
         steps:
             - name: Log in to the Container registry
-              uses: docker/login-action@v3.4.0
+              uses: docker/login-action@v3.5.0
               with:
                 registry: ${{env.REGISTRY}}
                 username: ${{github.actor}}
@@ -247,7 +247,7 @@ jobs:
 
             - name: Extract metadata (tags, labels) for Docker
               id: docker-extract-metadata
-              uses: docker/metadata-action@v5.7.0
+              uses: docker/metadata-action@v5.8.0
               with:
                 images: ${{env.REGISTRY}}/${{env.IMAGE_NAME}}
                 tags: |-
@@ -266,7 +266,7 @@ jobs:
                 labels: ${{steps.docker-extract-metadata.outputs.labels}}
 
             - name: Generate Artifact Attestation
-              uses: actions/attest-build-provenance@v2
+              uses: actions/attest-build-provenance@v3
               with:
                 subject-name: ${{env.REGISTRY}}/${{env.IMAGE_NAME}}
                 subject-digest: ${{steps.build-and-publish.outputs.digest}}
